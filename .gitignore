@@ -2,7 +2,7 @@ venv/
 __pycache__/
 *.pyc
 
-vector_store/
+vector-store/
 logs/
 eval-results/
 data/
