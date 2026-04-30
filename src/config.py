@@ -4,7 +4,7 @@ import os
 BASE_DIR = os.getcwd()
 
 DATA_PATH = os.path.join(BASE_DIR, "data")
-VECTOR_STORE_PATH = os.path.join(BASE_DIR, "vector-store")
+VECTOR_STORE_PATH = os.path.join(BASE_DIR, "vector-db")
 
 # Chunking
 CHUNK_SIZE = 500

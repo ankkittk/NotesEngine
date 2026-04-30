@@ -8,12 +8,10 @@ sys.path.append(SRC_PATH)
 # Config
 from config import DATA_PATH
 
-# Ingestion modules
+# Modules
 from ingestion.pdf_reader import extract_text_pages, needs_ocr
 from ingestion.ocr import ocr_document
 from ingestion.chunker import chunk_documents
-
-# Shared modules
 from embedder import create_embeddings
 from vector_store import store_embeddings
 

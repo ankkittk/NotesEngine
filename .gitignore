@@ -2,9 +2,11 @@ venv/
 __pycache__/
 *.pyc
 
-vector-store/
+vector-db/
 logs/
 eval-results/
 data/
 
 .env
+
+.vscode/
