@@ -17,7 +17,7 @@ def main():
         if query.lower() == "exit":
             break
 
-        contexts = search(query, top_k=3)
+        contexts = search(query, top_k=10)
 
         print("\n--- Retrieved Context ---\n")
         for i, c in enumerate(contexts, 1):
