@@ -8,6 +8,7 @@ if SRC_PATH not in sys.path:
 
 from retriever import search
 from generator import generate_answer
+from reranker import rerank
 
 
 def main():
@@ -17,7 +18,8 @@ def main():
         if query.lower() == "exit":
             break
 
-        contexts = search(query, top_k=10)
+        initial_chunks = search(query, top_k=20)
+        contexts = rerank(query, initial_chunks, top_k=3)
 
         print("\n--- Retrieved Context ---\n")
         for i, c in enumerate(contexts, 1):
