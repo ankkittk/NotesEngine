@@ -1,40 +1,41 @@
 from config import CHUNK_SIZE, CHUNK_OVERLAP
 
 
-def is_valid_chunk(chunk):
-    text = chunk.strip()
-
-    if len(text) < 50:
-        return False
-
-    if text.count(" ") < 5:
-        return False
-
-    bad_chars = sum(1 for c in text if not c.isalnum() and c not in " .,()-:%/\n")
-    if bad_chars / max(len(text), 1) > 0.35:
-        return False
-
-    return True
-
-
 def chunk_text(text):
     chunks = []
-    start = 0
 
-    while start < len(text):
-        end = start + CHUNK_SIZE
-        chunk = text[start:end]
+    # Step 1: split by paragraphs (preserve structure)
+    paragraphs = text.split("\n\n")
 
-        if is_valid_chunk(chunk):
-            chunks.append(chunk.strip())
+    for para in paragraphs:
+        para = para.strip()
 
-        start += CHUNK_SIZE - CHUNK_OVERLAP
+        if not para:
+            continue
+
+        # Step 2: if small → keep as-is
+        if len(para) <= CHUNK_SIZE:
+            chunks.append(para)
+
+        # Step 3: if large → split with overlap
+        else:
+            start = 0
+            while start < len(para):
+                end = start + CHUNK_SIZE
+                chunk = para[start:end].strip()
+
+                if chunk:
+                    chunks.append(chunk)
+
+                start += CHUNK_SIZE - CHUNK_OVERLAP
 
     return chunks
 
 
 def chunk_documents(documents):
     all_chunks = []
+
     for doc in documents:
         all_chunks.extend(chunk_text(doc))
+
     return all_chunks
