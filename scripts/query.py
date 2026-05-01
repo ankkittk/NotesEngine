@@ -1,9 +1,12 @@
 import sys
 import os
 
-sys.path.append(os.path.abspath("src"))
+CURRENT_DIR = os.path.dirname(__file__)
+SRC_PATH = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
+sys.path.append(SRC_PATH)
 
 from retriever import search
+from generator import generate_answer
 
 
 def main():
@@ -13,11 +16,16 @@ def main():
         if query.lower() == "exit":
             break
 
-        results = search(query, top_k=3)
+        contexts = search(query, top_k=3)
 
-        print("\n--- Top Results ---\n")
-        for i, res in enumerate(results, 1):
-            print(f"{i}. {res[:300]}...\n")
+        print("\n--- Retrieved Context ---\n")
+        for i, c in enumerate(contexts, 1):
+            print(f"{i}. {c[:200]}...\n")
+
+        answer = generate_answer(query, contexts)
+
+        print("\n--- Final Answer ---\n")
+        print(answer)
 
 
 if __name__ == "__main__":

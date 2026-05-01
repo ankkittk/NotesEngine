@@ -7,3 +7,5 @@ pdf2image
 langchain-community
 pymupdf
 pillow
+openai
+python-dotenv
