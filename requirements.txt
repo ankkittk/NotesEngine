@@ -9,3 +9,5 @@ pymupdf
 pillow
 openai
 python-dotenv
+python-docx
+python-pptx

@@ -9,7 +9,7 @@ def ocr_document(file_path):
     all_text = []
 
     for i, page in enumerate(doc):
-        print(f"PyMuPDF OCR fallback on page {i+1}")
+        print(f"PyMuPDF OCR fallback on page {i + 1}")
 
         pix = page.get_pixmap()
         img_bytes = pix.tobytes("png")

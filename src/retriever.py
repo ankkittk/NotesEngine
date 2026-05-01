@@ -23,13 +23,13 @@ def load_vector_store():
 def search(query, top_k=3):
     index, texts, vectorizer = load_vector_store()
 
-    query_vec = vectorizer.transform([query]).toarray()
+    query_vec = vectorizer.transform([query]).toarray().astype("float32")
 
-    D, I = index.search(np.array(query_vec), top_k)
+    _, I = index.search(np.array(query_vec), top_k)
 
     results = []
     for idx in I[0]:
-        if idx < len(texts):
+        if 0 <= idx < len(texts):
             results.append(texts[idx])
 
     return results

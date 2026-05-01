@@ -3,7 +3,8 @@ import os
 
 CURRENT_DIR = os.path.dirname(__file__)
 SRC_PATH = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
-sys.path.append(SRC_PATH)
+if SRC_PATH not in sys.path:
+    sys.path.insert(0, SRC_PATH)
 
 from retriever import search
 from generator import generate_answer
@@ -11,7 +12,7 @@ from generator import generate_answer
 
 def main():
     while True:
-        query = input("\nEnter query (or 'exit'): ")
+        query = input("\nEnter query (or 'exit'): ").strip()
 
         if query.lower() == "exit":
             break

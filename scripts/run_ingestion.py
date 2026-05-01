@@ -3,15 +3,13 @@ import os
 
 CURRENT_DIR = os.path.dirname(__file__)
 SRC_PATH = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
-sys.path.append(SRC_PATH)
+if SRC_PATH not in sys.path:
+    sys.path.insert(0, SRC_PATH)
 
-# Config
 from config import DATA_PATH
-
-# Modules
-from ingestion.pdf_reader import extract_text_pages, needs_ocr
-from ingestion.ocr import ocr_document
-from ingestion.chunker import chunk_documents
+from pdf_reader import extract_text_pages, needs_ocr
+from ocr import ocr_document
+from chunker import chunk_documents
 from embedder import create_embeddings
 from vector_store import store_embeddings
 
@@ -19,23 +17,28 @@ from vector_store import store_embeddings
 def process_pdf(file_path):
     pages = extract_text_pages(file_path)
 
-    for text in pages:
-        if needs_ocr(text):
-            print(f"OCR triggered for {file_path}")
-            return ocr_document(file_path)
+    text_part = "\n".join(pages)
 
-    return "\n".join(pages)
+    # ALWAYS run OCR also
+    ocr_part = ocr_document(file_path)
+
+    # merge both
+    return text_part + "\n" + ocr_part
 
 
 def load_documents():
     documents = []
 
-    for file in os.listdir(DATA_PATH):
-        if file.endswith(".pdf"):
-            file_path = os.path.join(DATA_PATH, file)
-            print(f"Processing {file}")
+    for file in sorted(os.listdir(DATA_PATH)):
+        if not file.lower().endswith(".pdf"):
+            continue
 
-            text = process_pdf(file_path)
+        file_path = os.path.join(DATA_PATH, file)
+        print(f"Processing {file}")
+
+        text = process_pdf(file_path)
+
+        if text.strip():
             documents.append(text)
 
     return documents
@@ -49,8 +52,12 @@ def main():
         return
 
     chunks = chunk_documents(documents)
-    embeddings, vectorizer = create_embeddings(chunks)
 
+    if not chunks:
+        print("No valid chunks produced")
+        return
+
+    embeddings, vectorizer = create_embeddings(chunks)
     store_embeddings(embeddings, chunks, vectorizer)
 
 

@@ -11,7 +11,7 @@ client = OpenAI(
 
 
 def generate_answer(query, contexts):
-    context_text = "\n\n".join(contexts)
+    context_text = "\n\n".join(contexts) if contexts else "No relevant context found."
 
     prompt = f"""
 You are a helpful assistant.
@@ -34,4 +34,4 @@ Answer:
         temperature=0.2
     )
 
-    return response.choices[0].message.content
+    return response.choices[0].message.content.strip()
