@@ -6,9 +6,8 @@ SRC_PATH = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
 if SRC_PATH not in sys.path:
     sys.path.insert(0, SRC_PATH)
 
-from config import DATA_PATH
-from pdf_reader import extract_text_pages, needs_ocr
-from ocr import ocr_document
+from config import DATA_PATH, ALLOWED_EXTENSIONS
+from document_loader import load_document
 from chunker import chunk_documents
 from embedder import create_embeddings
 from vector_store import store_embeddings
@@ -30,13 +29,13 @@ def load_documents():
     documents = []
 
     for file in sorted(os.listdir(DATA_PATH)):
-        if not file.lower().endswith(".pdf"):
+        if not file.lower().endswith(ALLOWED_EXTENSIONS):
             continue
 
         file_path = os.path.join(DATA_PATH, file)
         print(f"Processing {file}")
 
-        text = process_pdf(file_path)
+        text = load_document(file_path)
 
         if text.strip():
             documents.append(text)
