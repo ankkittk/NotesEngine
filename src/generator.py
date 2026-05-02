@@ -16,8 +16,11 @@ def generate_answer(query, contexts):
     prompt = f"""
 You are a helpful assistant.
 
-Use ONLY the provided context to answer the question.
-If the answer is not present, say "Not found in notes".
+Rules:
+1) First, extract and QUOTE the most relevant lines from the context (verbatim).
+2) Then, you may add a short explanation ONLY if needed.
+3) Do NOT invent steps or function names not present in the context.
+4) If the answer is incomplete in context, say "Partially found in notes".
 
 Context:
 {context_text}
@@ -25,7 +28,12 @@ Context:
 Question:
 {query}
 
-Answer:
+Answer format:
+[FROM NOTES]
+<quoted lines>
+
+[EXPLANATION]
+<brief explanation if needed>
 """
 
     response = client.chat.completions.create(
