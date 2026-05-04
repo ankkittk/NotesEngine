@@ -14,3 +14,9 @@ ALLOWED_EXTENSIONS = (".pdf", ".txt", ".docx", ".pptx")
 INDEX_FILE = "index.faiss"
 TEXTS_FILE = "texts.npy"
 VECTORIZER_FILE = "vectorizer.pkl"
+
+INDEX_PATH = os.path.join(VECTOR_STORE_PATH, INDEX_FILE)
+TEXTS_PATH = os.path.join(VECTOR_STORE_PATH, "texts.pkl")   # used by new pipeline
+VECTORIZER_PATH = os.path.join(VECTOR_STORE_PATH, VECTORIZER_FILE)
+
+TRACKER_PATH = os.path.join(VECTOR_STORE_PATH, "processed_files.json")

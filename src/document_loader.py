@@ -5,7 +5,7 @@ from pptx import Presentation
 
 from vision_extractor import extract_batch_images
 
-BATCH_SIZE = 4
+BATCH_SIZE = 2
 
 
 def pdf_page_has_image(page):
@@ -29,7 +29,7 @@ def load_pdf(file_path):
         has_image = pdf_page_has_image(page)
 
         if should_use_vision(text, has_image):
-            pix = page.get_pixmap()
+            pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))  # lower resolution
             batch_imgs.append(pix.tobytes("png"))
             batch_indices.append(i)
             results.append(None)  # placeholder
@@ -44,6 +44,7 @@ def load_pdf(file_path):
 
     # flush remaining batch
     if batch_imgs:
+        print(f"   → Vision batch ({len(batch_imgs)} pages)...", flush=True)
         outs = extract_batch_images(batch_imgs)
         for idx, out in zip(batch_indices, outs):
             results[idx] = out

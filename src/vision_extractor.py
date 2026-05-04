@@ -3,6 +3,7 @@ import base64
 import requests
 import time
 from dotenv import load_dotenv
+import requests.exceptions
 
 load_dotenv()
 
@@ -30,7 +31,9 @@ def extract_batch_images(images_bytes_list):
     parts = [
         {
             "text": (
-                "Extract text from EACH image separately.\n"
+                "Extract ONLY visible text from each image.\n"
+                "If no readable text is present, return EMPTY.\n"
+                "Do NOT describe the image.\n"
                 "Return strictly in this format:\n"
                 "Page 1:\n...\n\nPage 2:\n...\n"
             )
@@ -54,15 +57,27 @@ def extract_batch_images(images_bytes_list):
     payload = {"contents": [{"parts": parts}]}
 
     # retry logic
-    for _ in range(3):
-        res = requests.post(url, json=payload)
+    for attempt in range(3):
+        try:
+            res = requests.post(url, json=payload, timeout=20)
 
-        if res.status_code == 429:
+            if res.status_code == 429:
+                time.sleep(2)
+                continue
+
+            res.raise_for_status()
+            break
+
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ):
+            print(f"[Retry {attempt+1}] Connection failed, retrying...")
             time.sleep(2)
-            continue
 
-        res.raise_for_status()
-        break
+    else:
+        return [""] * len(images_bytes_list)
 
     data = res.json()
 
