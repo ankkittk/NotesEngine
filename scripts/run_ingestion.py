@@ -95,7 +95,7 @@ def main():
 
     print(f"\nChunking {len(documents)} documents...")
     chunk_start = time.perf_counter()
-    chunks = chunk_documents(documents)
+    chunks = chunk_documents(documents, file_names)
     print(f"Created {len(chunks)} chunks in {time.perf_counter() - chunk_start:.1f}s")
 
     if not chunks:
@@ -104,11 +104,11 @@ def main():
 
     print("Creating embeddings...")
     emb_start = time.perf_counter()
-    embeddings, vectorizer = create_embeddings(chunks)
+    embeddings, texts, metadata, vectorizer = create_embeddings(chunks)
     print(f"Embeddings ready in {time.perf_counter() - emb_start:.1f}s")
 
     print("Updating vector store...")
-    store_embeddings(embeddings, chunks, vectorizer)
+    store_embeddings(embeddings, texts, metadata, vectorizer)
 
     for f in file_names:
         mark_processed(f, processed_files)

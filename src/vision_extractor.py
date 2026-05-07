@@ -5,6 +5,8 @@ import time
 from dotenv import load_dotenv
 import requests.exceptions
 
+from vision_cache import get_cached_result, set_cached_result
+
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -15,9 +17,12 @@ LAST_CALL = 0
 
 def rate_limit():
     global LAST_CALL
+
     now = time.time()
+
     if now - LAST_CALL < MIN_INTERVAL:
         time.sleep(MIN_INTERVAL - (now - LAST_CALL))
+
     LAST_CALL = time.time()
 
 
@@ -26,6 +31,27 @@ def to_base64(img_bytes):
 
 
 def extract_batch_images(images_bytes_list):
+    outputs = []
+    uncached_images = []
+    uncached_indices = []
+
+    # ---------------- CACHE CHECK ----------------
+    for i, img in enumerate(images_bytes_list):
+        cached = get_cached_result(img)
+
+        if cached is not None:
+            outputs.append(cached)
+
+        else:
+            outputs.append(None)
+            uncached_images.append(img)
+            uncached_indices.append(i)
+
+    # nothing to call
+    if not uncached_images:
+        return outputs
+
+    # ---------------- API CALL ----------------
     rate_limit()
 
     parts = [
@@ -40,13 +66,15 @@ def extract_batch_images(images_bytes_list):
         }
     ]
 
-    for img in images_bytes_list:
-        parts.append({
-            "inline_data": {
-                "mime_type": "image/png",
-                "data": to_base64(img)
+    for img in uncached_images:
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": "image/png",
+                    "data": to_base64(img)
+                }
             }
-        })
+        )
 
     url = (
         "https://generativelanguage.googleapis.com/v1/models/"
@@ -56,10 +84,13 @@ def extract_batch_images(images_bytes_list):
 
     payload = {"contents": [{"parts": parts}]}
 
-    # retry logic
     for attempt in range(3):
         try:
-            res = requests.post(url, json=payload, timeout=20)
+            res = requests.post(
+                url,
+                json=payload,
+                timeout=20
+            )
 
             if res.status_code == 429:
                 time.sleep(2)
@@ -72,6 +103,7 @@ def extract_batch_images(images_bytes_list):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.ChunkedEncodingError,
+            requests.exceptions.HTTPError,
         ):
             print(f"[Retry {attempt+1}] Connection failed, retrying...")
             time.sleep(2)
@@ -79,45 +111,64 @@ def extract_batch_images(images_bytes_list):
     else:
         return [""] * len(images_bytes_list)
 
+    # ---------------- SAFE PARSING ----------------
     data = res.json()
 
-    # -------- SAFE PARSING --------
     if "candidates" not in data:
         return [""] * len(images_bytes_list)
 
     candidates = data.get("candidates", [])
+
     if not candidates:
         return [""] * len(images_bytes_list)
 
     content = candidates[0].get("content")
+
     if not content:
         return [""] * len(images_bytes_list)
 
-    parts = content.get("parts", [])
-    if not parts:
+    response_parts = content.get("parts", [])
+
+    if not response_parts:
         return [""] * len(images_bytes_list)
 
-    text = parts[0].get("text", "")
-    # --------------------------------
+    text = response_parts[0].get("text", "")
 
-    # -------- SPLITTING LOGIC --------
-    outputs = []
+    # ---------------- SPLIT OUTPUTS ----------------
+    split_outputs = []
     current = []
 
     for line in text.splitlines():
+
         if line.strip().lower().startswith("page"):
+
             if current:
-                outputs.append("\n".join(current).strip())
+                split_outputs.append(
+                    "\n".join(current).strip()
+                )
+
                 current = []
+
             continue
+
         current.append(line)
 
     if current:
-        outputs.append("\n".join(current).strip())
+        split_outputs.append(
+            "\n".join(current).strip()
+        )
 
-    # ensure alignment with input batch size
-    while len(outputs) < len(images_bytes_list):
-        outputs.append("")
-    # --------------------------------
+    # ensure alignment
+    while len(split_outputs) < len(uncached_images):
+        split_outputs.append("")
+
+    # ---------------- ASSIGN + CACHE ----------------
+    for idx, out, img in zip(
+        uncached_indices,
+        split_outputs,
+        uncached_images
+    ):
+        outputs[idx] = out
+        set_cached_result(img, out)
 
     return outputs

@@ -14,7 +14,7 @@ def pdf_page_has_image(page):
 
 def should_use_vision(text, has_image):
     # minimal gate to avoid over-calling API
-    return has_image and len(text.split()) < 30
+    return has_image and len(text.split()) < 5
 
 
 def load_pdf(file_path):
