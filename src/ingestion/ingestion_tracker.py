@@ -1,6 +1,7 @@
 import os
 import json
-from config import TRACKER_PATH
+
+from ..core.config import TRACKER_PATH
 
 
 def load_tracker():
@@ -12,7 +13,6 @@ def load_tracker():
             data = json.load(f)
             return set(data) if isinstance(data, list) else set()
     except (json.JSONDecodeError, IOError):
-        # corrupted or unreadable file → reset safely
         return set()
 
 

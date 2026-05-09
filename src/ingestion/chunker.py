@@ -1,5 +1,6 @@
-from config import CHUNK_SIZE, CHUNK_OVERLAP
 import hashlib
+
+from ..core.config import CHUNK_OVERLAP, CHUNK_SIZE
 
 
 def chunk_text(text):

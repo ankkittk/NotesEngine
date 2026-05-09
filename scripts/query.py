@@ -1,14 +1,15 @@
-import sys
 import os
+import sys
 
 CURRENT_DIR = os.path.dirname(__file__)
-SRC_PATH = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
-if SRC_PATH not in sys.path:
-    sys.path.insert(0, SRC_PATH)
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-from retriever import search
-from generator import generate_answer
-from reranker import rerank
+from src.core.config import INITIAL_RETRIEVAL_TOP_K, RERANK_TOP_K
+from src.generation.generator import generate_answer
+from src.retrieval.reranker import rerank
+from src.retrieval.retriever import search
 
 
 def main():
@@ -18,8 +19,8 @@ def main():
         if query.lower() == "exit":
             break
 
-        initial_chunks = search(query, top_k=20)
-        contexts = rerank(query, initial_chunks, top_k=3)
+        initial_chunks = search(query, top_k=INITIAL_RETRIEVAL_TOP_K)
+        contexts = rerank(query, initial_chunks, top_k=RERANK_TOP_K)
 
         print("\n--- Retrieved Context ---\n")
         for i, c in enumerate(contexts, 1):

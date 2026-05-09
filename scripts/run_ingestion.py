@@ -1,23 +1,23 @@
-import sys
 import os
+import sys
 import time
 
 CURRENT_DIR = os.path.dirname(__file__)
-SRC_PATH = os.path.abspath(os.path.join(CURRENT_DIR, "..", "src"))
-if SRC_PATH not in sys.path:
-    sys.path.insert(0, SRC_PATH)
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-from config import DATA_PATH, ALLOWED_EXTENSIONS
-from document_loader import load_document
-from chunker import chunk_documents
-from embedder import create_embeddings
-from vector_store import store_embeddings
-from ingestion_tracker import (
+from src.core.config import DATA_PATH, ALLOWED_EXTENSIONS
+from src.ingestion.chunker import chunk_documents
+from src.ingestion.document_loader import load_document
+from src.ingestion.embedder import create_embeddings
+from src.ingestion.ingestion_tracker import (
     load_tracker,
     save_tracker,
     is_processed,
     mark_processed,
 )
+from src.retrieval.vector_store import store_embeddings
 
 
 def render_progress(current, total, prefix="", detail=""):

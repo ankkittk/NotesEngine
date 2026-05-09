@@ -1,11 +1,15 @@
 import os
+
 import fitz
 from docx import Document
 from pptx import Presentation
 
-from vision_extractor import extract_batch_images
-
-BATCH_SIZE = 2
+from ..core.config import (
+    OCR_MIN_TEXT_THRESHOLD,
+    VISION_BATCH_SIZE,
+    VISION_PDF_RENDER_SCALE,
+)
+from .vision.vision_extractor import extract_batch_images
 
 
 def pdf_page_has_image(page):
@@ -13,8 +17,7 @@ def pdf_page_has_image(page):
 
 
 def should_use_vision(text, has_image):
-    # minimal gate to avoid over-calling API
-    return has_image and len(text.split()) < 5
+    return has_image and len(text.split()) < OCR_MIN_TEXT_THRESHOLD
 
 
 def load_pdf(file_path):
@@ -29,12 +32,14 @@ def load_pdf(file_path):
         has_image = pdf_page_has_image(page)
 
         if should_use_vision(text, has_image):
-            pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))  # lower resolution
+            pix = page.get_pixmap(
+                matrix=fitz.Matrix(VISION_PDF_RENDER_SCALE, VISION_PDF_RENDER_SCALE)
+            )
             batch_imgs.append(pix.tobytes("png"))
             batch_indices.append(i)
-            results.append(None)  # placeholder
+            results.append(None)
 
-            if len(batch_imgs) == BATCH_SIZE:
+            if len(batch_imgs) == VISION_BATCH_SIZE:
                 outs = extract_batch_images(batch_imgs)
                 for idx, out in zip(batch_indices, outs):
                     results[idx] = out
@@ -42,7 +47,6 @@ def load_pdf(file_path):
         else:
             results.append(text)
 
-    # flush remaining batch
     if batch_imgs:
         print(f"   → Vision batch ({len(batch_imgs)} pages)...", flush=True)
         outs = extract_batch_images(batch_imgs)

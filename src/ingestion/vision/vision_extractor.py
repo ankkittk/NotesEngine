@@ -1,17 +1,27 @@
-import os
 import base64
-import requests
+import os
 import time
-from dotenv import load_dotenv
-import requests.exceptions
 
-from vision_cache import get_cached_result, set_cached_result
+import requests
+import requests.exceptions
+from dotenv import load_dotenv
+
+from ...core.config import (
+    VISION_API_BASE_URL,
+    VISION_INPUT_MIME_TYPE,
+    VISION_MAX_RETRIES,
+    VISION_MODEL_NAME,
+    VISION_OCR_PROMPT,
+    VISION_RATE_LIMIT_SECONDS,
+    VISION_RETRY_SLEEP_SECONDS,
+    VISION_TIMEOUT_SECONDS,
+)
 
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-MIN_INTERVAL = 1.2
+MIN_INTERVAL = VISION_RATE_LIMIT_SECONDS
 LAST_CALL = 0
 
 
@@ -31,69 +41,47 @@ def to_base64(img_bytes):
 
 
 def extract_batch_images(images_bytes_list):
-    outputs = []
-    uncached_images = []
-    uncached_indices = []
+    if not images_bytes_list:
+        return []
 
-    # ---------------- CACHE CHECK ----------------
-    for i, img in enumerate(images_bytes_list):
-        cached = get_cached_result(img)
-
-        if cached is not None:
-            outputs.append(cached)
-
-        else:
-            outputs.append(None)
-            uncached_images.append(img)
-            uncached_indices.append(i)
-
-    # nothing to call
-    if not uncached_images:
-        return outputs
-
-    # ---------------- API CALL ----------------
     rate_limit()
 
-    parts = [
-        {
-            "text": (
-                "Extract ONLY visible text from each image.\n"
-                "If no readable text is present, return EMPTY.\n"
-                "Do NOT describe the image.\n"
-                "Return strictly in this format:\n"
-                "Page 1:\n...\n\nPage 2:\n...\n"
-            )
-        }
-    ]
+    parts = [{"text": VISION_OCR_PROMPT.strip()}]
 
-    for img in uncached_images:
+    for img in images_bytes_list:
         parts.append(
             {
                 "inline_data": {
-                    "mime_type": "image/png",
-                    "data": to_base64(img)
+                    "mime_type": VISION_INPUT_MIME_TYPE,
+                    "data": to_base64(img),
                 }
             }
         )
 
     url = (
-        "https://generativelanguage.googleapis.com/v1/models/"
-        "gemini-2.5-flash:generateContent"
+        f"{VISION_API_BASE_URL}/{VISION_MODEL_NAME}:generateContent"
         f"?key={GEMINI_API_KEY}"
     )
 
     payload = {"contents": [{"parts": parts}]}
 
-    for attempt in range(3):
+    for attempt in range(VISION_MAX_RETRIES):
         try:
             res = requests.post(
                 url,
                 json=payload,
-                timeout=20
+                timeout=VISION_TIMEOUT_SECONDS,
             )
 
             if res.status_code == 429:
-                time.sleep(2)
+                time.sleep(VISION_RETRY_SLEEP_SECONDS)
+                continue
+
+            if res.status_code in (500, 502, 503, 504):
+                print(
+                    f"[Retry {attempt+1}] Server busy ({res.status_code}), retrying..."
+                )
+                time.sleep(VISION_RETRY_SLEEP_SECONDS)
                 continue
 
             res.raise_for_status()
@@ -106,69 +94,44 @@ def extract_batch_images(images_bytes_list):
             requests.exceptions.HTTPError,
         ):
             print(f"[Retry {attempt+1}] Connection failed, retrying...")
-            time.sleep(2)
-
+            time.sleep(VISION_RETRY_SLEEP_SECONDS)
     else:
         return [""] * len(images_bytes_list)
 
-    # ---------------- SAFE PARSING ----------------
     data = res.json()
 
     if "candidates" not in data:
         return [""] * len(images_bytes_list)
 
     candidates = data.get("candidates", [])
-
     if not candidates:
         return [""] * len(images_bytes_list)
 
     content = candidates[0].get("content")
-
     if not content:
         return [""] * len(images_bytes_list)
 
     response_parts = content.get("parts", [])
-
     if not response_parts:
         return [""] * len(images_bytes_list)
 
     text = response_parts[0].get("text", "")
 
-    # ---------------- SPLIT OUTPUTS ----------------
     split_outputs = []
     current = []
 
     for line in text.splitlines():
-
         if line.strip().lower().startswith("page"):
-
             if current:
-                split_outputs.append(
-                    "\n".join(current).strip()
-                )
-
+                split_outputs.append("\n".join(current).strip())
                 current = []
-
             continue
-
         current.append(line)
 
     if current:
-        split_outputs.append(
-            "\n".join(current).strip()
-        )
+        split_outputs.append("\n".join(current).strip())
 
-    # ensure alignment
-    while len(split_outputs) < len(uncached_images):
+    while len(split_outputs) < len(images_bytes_list):
         split_outputs.append("")
 
-    # ---------------- ASSIGN + CACHE ----------------
-    for idx, out, img in zip(
-        uncached_indices,
-        split_outputs,
-        uncached_images
-    ):
-        outputs[idx] = out
-        set_cached_result(img, out)
-
-    return outputs
+    return split_outputs[: len(images_bytes_list)]
