@@ -9,6 +9,7 @@ if PROJECT_ROOT not in sys.path:
 from src.core.config import INITIAL_RETRIEVAL_TOP_K, RERANK_TOP_K
 from src.core.utils import format_citation, get_context_text, unique_citations
 from src.generation.generator import generate_answer
+from src.retrieval.query_rewriter import rewrite_query
 from src.retrieval.reranker import rerank
 from src.retrieval.retriever import search
 
@@ -20,8 +21,14 @@ def main():
         if query.lower() == "exit":
             break
 
-        initial_chunks = search(query, top_k=INITIAL_RETRIEVAL_TOP_K)
-        contexts = rerank(query, initial_chunks, top_k=RERANK_TOP_K)
+        retrieval_query = rewrite_query(query)
+
+        if retrieval_query != query:
+            print("\n--- Rewritten Retrieval Query ---\n")
+            print(retrieval_query)
+
+        initial_chunks = search(retrieval_query, top_k=INITIAL_RETRIEVAL_TOP_K)
+        contexts = rerank(retrieval_query, initial_chunks, top_k=RERANK_TOP_K)
 
         print("\n--- Retrieved Context ---\n")
         for i, c in enumerate(contexts, 1):
