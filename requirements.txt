@@ -12,3 +12,7 @@ python-dotenv
 python-docx
 python-pptx
 sentence-transformers
+fasrtapi
+uvicorn
+streamlit
+requests

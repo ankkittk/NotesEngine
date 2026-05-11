@@ -7,6 +7,7 @@ from ..core.config import (
     GENERATION_MODEL_NAME,
     GENERATION_TEMPERATURE,
 )
+from ..core.utils import context_to_prompt_block
 from .prompts import ANSWER_GENERATION_PROMPT_TEMPLATE
 
 load_dotenv()
@@ -18,7 +19,10 @@ client = OpenAI(
 
 
 def generate_answer(query, contexts):
-    context_text = "\n\n".join(contexts) if contexts else "No relevant context found."
+    context_blocks = [
+        context_to_prompt_block(ctx) for ctx in (contexts or [])
+    ]
+    context_text = "\n\n".join(context_blocks) if context_blocks else "No relevant context found."
 
     prompt = ANSWER_GENERATION_PROMPT_TEMPLATE.format(
         context_text=context_text,

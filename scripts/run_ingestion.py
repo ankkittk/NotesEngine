@@ -63,16 +63,21 @@ def load_new_documents(processed_files):
 
         render_progress(idx - 1, total, prefix="Ingesting", detail=file)
 
-        text = load_document(file_path)
+        page_records = load_document(file_path)
         elapsed = time.perf_counter() - started
 
-        if text.strip():
-            documents.append(text)
+        if page_records:
+            documents.extend(page_records)
             file_names.append(file)
-            word_count = len(text.split())
+
+            combined_text = "\n\n".join(
+                record.get("text", "") for record in page_records if record.get("text", "").strip()
+            )
+            word_count = len(combined_text.split())
+
             print(
                 f"[{idx}/{total}] {file} | "
-                f"words={word_count:,} chars={len(text):,} | "
+                f"pages={len(page_records)} words={word_count:,} chars={len(combined_text):,} | "
                 f"{elapsed:.1f}s"
             )
         else:
@@ -93,9 +98,9 @@ def main():
         print("No new files to process.")
         return
 
-    print(f"\nChunking {len(documents)} documents...")
+    print(f"\nChunking {len(documents)} page records...")
     chunk_start = time.perf_counter()
-    chunks = chunk_documents(documents, file_names)
+    chunks = chunk_documents(documents)
     print(f"Created {len(chunks)} chunks in {time.perf_counter() - chunk_start:.1f}s")
 
     if not chunks:

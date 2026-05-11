@@ -8,6 +8,14 @@ model = SentenceTransformer(EMBEDDING_MODEL_NAME)
 
 def create_embeddings(chunks):
     texts = [c["text"] for c in chunks]
+    metadata = [
+        {
+            "source": c.get("source", "unknown"),
+            "page": c.get("page"),
+            "chunk_id": c.get("chunk_id"),
+        }
+        for c in chunks
+    ]
 
     embeddings = model.encode(
         texts,
@@ -17,4 +25,4 @@ def create_embeddings(chunks):
         show_progress_bar=True
     ).astype("float32")
 
-    return embeddings, texts, chunks, model
+    return embeddings, texts, metadata, model

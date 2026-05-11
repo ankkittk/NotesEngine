@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 
@@ -7,15 +8,34 @@ import numpy as np
 from ..core.config import INITIAL_RETRIEVAL_TOP_K, INDEX_PATH, META_PATH, TEXTS_PATH, VECTORIZER_PATH
 
 
-def _fallback_metadata(texts):
-    return [
-        {
-            "text": text,
+def _normalize_metadata_item(item):
+    if not isinstance(item, dict):
+        return {
             "source": "unknown",
-            "chunk_id": f"legacy_{i}"
+            "page": None,
+            "chunk_id": None,
         }
-        for i, text in enumerate(texts)
-    ]
+
+    return {
+        "source": item.get("source", "unknown"),
+        "page": item.get("page"),
+        "chunk_id": item.get("chunk_id"),
+    }
+
+
+def _load_metadata():
+    if os.path.exists(META_PATH):
+        with open(META_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return [_normalize_metadata_item(item) for item in data] if isinstance(data, list) else []
+
+    legacy_meta_path = os.path.join(os.path.dirname(META_PATH), "metadata.pkl")
+    if os.path.exists(legacy_meta_path):
+        with open(legacy_meta_path, "rb") as f:
+            data = pickle.load(f)
+        return [_normalize_metadata_item(item) for item in data] if isinstance(data, list) else []
+
+    return []
 
 
 def load_vector_store():
@@ -24,16 +44,15 @@ def load_vector_store():
     texts = np.load(
         TEXTS_PATH,
         allow_pickle=True
-    )
+    ).tolist()
 
     with open(VECTORIZER_PATH, "rb") as f:
         vectorizer = pickle.load(f)
 
-    if os.path.exists(META_PATH):
-        with open(META_PATH, "rb") as f:
-            metadata = pickle.load(f)
-    else:
-        metadata = _fallback_metadata(texts.tolist())
+    metadata = _load_metadata()
+
+    if len(texts) != len(metadata):
+        raise ValueError("Vector store is inconsistent: texts and metadata lengths differ.")
 
     return index, texts, vectorizer, metadata
 
@@ -47,11 +66,22 @@ def search(query, top_k=INITIAL_RETRIEVAL_TOP_K):
         normalize_embeddings=True
     ).astype("float32")
 
-    _, I = index.search(np.array(query_vec), top_k)
+    distances, indices = index.search(np.array(query_vec), top_k)
 
     results = []
-    for idx in I[0]:
-        if 0 <= idx < len(metadata):
-            results.append(metadata[idx]["text"])
+    for rank, idx in enumerate(indices[0]):
+        if idx < 0 or idx >= len(texts):
+            continue
+
+        meta = metadata[idx] if idx < len(metadata) else {}
+        results.append(
+            {
+                "text": texts[idx],
+                "source": meta.get("source", "unknown"),
+                "page": meta.get("page"),
+                "chunk_id": meta.get("chunk_id"),
+                "retrieval_distance": float(distances[0][rank]),
+            }
+        )
 
     return results

@@ -1,6 +1,7 @@
 from sentence_transformers import CrossEncoder
 
 from ..core.config import RERANKER_MODEL_NAME, RERANK_TOP_K
+from ..core.utils import get_context_text
 
 model = CrossEncoder(RERANKER_MODEL_NAME)
 
@@ -9,7 +10,7 @@ def rerank(query, chunks, top_k=RERANK_TOP_K):
     if not chunks:
         return []
 
-    pairs = [(query, chunk) for chunk in chunks]
+    pairs = [(query, get_context_text(chunk)) for chunk in chunks]
     scores = model.predict(pairs)
 
     ranked = sorted(
@@ -18,4 +19,13 @@ def rerank(query, chunks, top_k=RERANK_TOP_K):
         reverse=True
     )
 
-    return [chunk for chunk, _ in ranked[:top_k]]
+    results = []
+    for chunk, score in ranked[:top_k]:
+        if isinstance(chunk, dict):
+            item = dict(chunk)
+        else:
+            item = {"text": str(chunk)}
+        item["rerank_score"] = float(score)
+        results.append(item)
+
+    return results

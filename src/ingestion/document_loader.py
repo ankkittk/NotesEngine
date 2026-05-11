@@ -20,64 +20,106 @@ def should_use_vision(text, has_image):
     return has_image and len(text.split()) < OCR_MIN_TEXT_THRESHOLD
 
 
+def _make_record(text, source, page):
+    return {
+        "text": text or "",
+        "source": source,
+        "page": page,
+    }
+
+
 def load_pdf(file_path):
+    source = os.path.basename(file_path)
     doc = fitz.open(file_path)
 
     results = []
     batch_imgs = []
-    batch_indices = []
+    batch_records = []
 
-    for i, page in enumerate(doc):
-        text = page.get_text()
-        has_image = pdf_page_has_image(page)
+    try:
+        for i, page in enumerate(doc, start=1):
+            text = page.get_text()
+            has_image = pdf_page_has_image(page)
+            record = _make_record(text, source, i)
 
-        if should_use_vision(text, has_image):
-            pix = page.get_pixmap(
-                matrix=fitz.Matrix(VISION_PDF_RENDER_SCALE, VISION_PDF_RENDER_SCALE)
-            )
-            batch_imgs.append(pix.tobytes("png"))
-            batch_indices.append(i)
-            results.append(None)
+            if should_use_vision(text, has_image):
+                pix = page.get_pixmap(
+                    matrix=fitz.Matrix(VISION_PDF_RENDER_SCALE, VISION_PDF_RENDER_SCALE)
+                )
+                batch_imgs.append(pix.tobytes("png"))
+                batch_records.append(record)
+                results.append(record)
 
-            if len(batch_imgs) == VISION_BATCH_SIZE:
-                outs = extract_batch_images(batch_imgs)
-                for idx, out in zip(batch_indices, outs):
-                    results[idx] = out
-                batch_imgs, batch_indices = [], []
-        else:
-            results.append(text)
+                if len(batch_imgs) == VISION_BATCH_SIZE:
+                    outs = extract_batch_images(batch_imgs)
+                    for rec, out in zip(batch_records, outs):
+                        rec["text"] = out or ""
+                    batch_imgs, batch_records = [], []
+            else:
+                results.append(record)
 
-    if batch_imgs:
-        print(f"   → Vision batch ({len(batch_imgs)} pages)...", flush=True)
-        outs = extract_batch_images(batch_imgs)
-        for idx, out in zip(batch_indices, outs):
-            results[idx] = out
+        if batch_imgs:
+            print(f"   → Vision batch ({len(batch_imgs)} pages)...", flush=True)
+            outs = extract_batch_images(batch_imgs)
+            for rec, out in zip(batch_records, outs):
+                rec["text"] = out or ""
 
-    return "\n".join(r for r in results if r)
+    finally:
+        doc.close()
+
+    return [r for r in results if r.get("text", "").strip()]
 
 
 def load_txt(file_path):
+    source = os.path.basename(file_path)
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-        return f.read()
+        text = f.read()
+
+    return [
+        {
+            "text": text,
+            "source": source,
+            "page": 1,
+        }
+    ] if text.strip() else []
 
 
 def load_docx(file_path):
+    source = os.path.basename(file_path)
     doc = Document(file_path)
-    return "\n".join(p.text for p in doc.paragraphs)
+    text = "\n".join(p.text for p in doc.paragraphs).strip()
+
+    return [
+        {
+            "text": text,
+            "source": source,
+            "page": 1,
+        }
+    ] if text else []
 
 
 def load_pptx(file_path):
+    source = os.path.basename(file_path)
     prs = Presentation(file_path)
-    slides = []
+    records = []
 
-    for slide in prs.slides:
+    for idx, slide in enumerate(prs.slides, start=1):
         parts = []
         for shape in slide.shapes:
             if hasattr(shape, "text") and shape.text.strip():
                 parts.append(shape.text)
-        slides.append("\n".join(parts))
 
-    return "\n".join(slides)
+        text = "\n".join(parts).strip()
+        if text:
+            records.append(
+                {
+                    "text": text,
+                    "source": source,
+                    "page": idx,
+                }
+            )
+
+    return records
 
 
 def load_document(file_path):
@@ -92,4 +134,4 @@ def load_document(file_path):
     if ext == ".pptx":
         return load_pptx(file_path)
 
-    return ""
+    return []

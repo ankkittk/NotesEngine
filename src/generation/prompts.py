@@ -3,7 +3,7 @@ You are a helpful assistant.
 
 Rules:
 1) First, extract and QUOTE the most relevant lines from the context (verbatim).
-2) Then, you may add a short explanation ONLY if needed.
+2) When a context block provides a source label, cite it inline using that label.
 3) Do NOT invent steps or function names not present in the context.
 4) If the answer is incomplete in context, say "Partially found in notes".
 
@@ -15,7 +15,7 @@ Question:
 
 Answer format:
 [FROM NOTES]
-<quoted lines>
+<quoted lines with citations>
 
 [EXPLANATION]
 <brief explanation if needed>

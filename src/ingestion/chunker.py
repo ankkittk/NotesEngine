@@ -32,11 +32,22 @@ def _hash(text):
 
 def chunk_documents(documents, file_names=None):
     all_chunks = []
-    seen = set()
 
     for i, doc in enumerate(documents):
-        file_name = file_names[i] if file_names else "unknown"
-        chunks = chunk_text(doc)
+        if isinstance(doc, dict):
+            text = doc.get("text", "")
+            source = doc.get("source", "unknown")
+            page = doc.get("page")
+        else:
+            text = str(doc)
+            source = file_names[i] if file_names and i < len(file_names) else "unknown"
+            page = None
+
+        if not text.strip():
+            continue
+
+        chunks = chunk_text(text)
+        seen = set()
 
         for j, chunk in enumerate(chunks):
             h = _hash(chunk)
@@ -45,10 +56,18 @@ def chunk_documents(documents, file_names=None):
 
             seen.add(h)
 
-            all_chunks.append({
-                "text": chunk,
-                "source": file_name,
-                "chunk_id": f"{file_name}_{j}"
-            })
+            if page is not None:
+                chunk_id = f"{source}_p{page}_{j}"
+            else:
+                chunk_id = f"{source}_{j}"
+
+            all_chunks.append(
+                {
+                    "text": chunk,
+                    "source": source,
+                    "page": page,
+                    "chunk_id": chunk_id,
+                }
+            )
 
     return all_chunks

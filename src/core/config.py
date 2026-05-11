@@ -46,7 +46,7 @@ Page 2:
 INDEX_FILE = "index.faiss"
 TEXTS_FILE = "texts.npy"
 VECTORIZER_FILE = "vectorizer.pkl"
-META_FILE = "metadata.pkl"
+META_FILE = "metadata.json"
 
 INDEX_PATH = os.path.join(VECTOR_STORE_PATH, INDEX_FILE)
 TEXTS_PATH = os.path.join(VECTOR_STORE_PATH, TEXTS_FILE)

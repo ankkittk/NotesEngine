@@ -46,14 +46,16 @@ def extract_batch_images(images_bytes_list):
 
     rate_limit()
 
-    parts = [{"text": VISION_OCR_PROMPT.strip()}]
+    parts = [
+        {"text": VISION_OCR_PROMPT.strip()}
+    ]
 
     for img in images_bytes_list:
         parts.append(
             {
                 "inline_data": {
                     "mime_type": VISION_INPUT_MIME_TYPE,
-                    "data": to_base64(img),
+                    "data": to_base64(img)
                 }
             }
         )
@@ -70,7 +72,7 @@ def extract_batch_images(images_bytes_list):
             res = requests.post(
                 url,
                 json=payload,
-                timeout=VISION_TIMEOUT_SECONDS,
+                timeout=VISION_TIMEOUT_SECONDS
             )
 
             if res.status_code == 429:
@@ -78,9 +80,7 @@ def extract_batch_images(images_bytes_list):
                 continue
 
             if res.status_code in (500, 502, 503, 504):
-                print(
-                    f"[Retry {attempt+1}] Server busy ({res.status_code}), retrying..."
-                )
+                print(f"[Retry {attempt+1}] Server busy ({res.status_code}), retrying...")
                 time.sleep(VISION_RETRY_SLEEP_SECONDS)
                 continue
 
