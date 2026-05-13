@@ -1,13 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from src.retrieval.retriever import search
-from src.retrieval.reranker import rerank
-from src.generation.generator import generate_answer
-from src.core.config import (
-    INITIAL_RETRIEVAL_TOP_K,
-    RERANK_TOP_K
-)
+from src.agent.workflow import run_agentic_workflow
 
 app = FastAPI()
 
@@ -18,26 +12,21 @@ class QueryRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"status": "running"}
+    return {
+        "message": "Agentic RAG API running"
+    }
 
 
 @app.post("/query")
-def query_rag(req: QueryRequest):
-    initial_chunks = search(
-        req.query,
-        top_k=INITIAL_RETRIEVAL_TOP_K
-    )
-
-    contexts = rerank(
-        req.query,
-        initial_chunks,
-        top_k=RERANK_TOP_K
-    )
-
-    answer = generate_answer(req.query, contexts)
+def query(req: QueryRequest):
+    state = run_agentic_workflow(req.query)
 
     return {
-        "query": req.query,
-        "answer": answer,
-        "contexts": contexts
+        "query": state.user_query,
+        "query_type": state.query_type,
+        "branch_taken": state.branch_taken,
+        "retrieval_query": state.retrieval_query,
+        "answer": state.answer,
+        "contexts": state.retrieved_contexts,
+        "followup_suggestions": state.followup_suggestions,
     }
