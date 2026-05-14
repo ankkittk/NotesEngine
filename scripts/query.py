@@ -8,7 +8,11 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from src.agent.workflow import run_agentic_workflow
-from src.core.utils import format_citation, get_context_text, unique_citations
+from src.core.utils import (
+    format_citation,
+    get_context_text,
+    unique_citations,
+)
 
 
 def main():
@@ -21,36 +25,46 @@ def main():
         state = run_agentic_workflow(query)
 
         print("\n--- Agent State ---\n")
-        print(f"Query Type      : {state.query_type}")
-        print(f"Branch Taken    : {state.branch_taken}")
+
+        print(f"Query Type            : {state.query_type}")
+        print(f"Branch Taken          : {state.branch_taken}")
+        print(f"Needs Clarification   : {state.needs_clarification}")
+        print(f"Analyzer Confidence   : {state.analyzer_confidence:.2f}")
+
+        if state.analyzer_reason:
+            print(f"Analyzer Reason       : {state.analyzer_reason}")
 
         if state.retrieval_query:
-            print(f"Retrieval Query : {state.retrieval_query}")
+            print(f"Retrieval Query       : {state.retrieval_query}")
 
-        print("\n--- Retrieved Context ---\n")
+        if state.retrieved_contexts:
+            print("\n--- Retrieved Context ---\n")
 
-        for i, c in enumerate(state.retrieved_contexts, 1):
-            label = format_citation(c)
-            snippet = get_context_text(c)[:200]
+            for i, c in enumerate(state.retrieved_contexts, 1):
+                label = format_citation(c)
+                snippet = get_context_text(c)[:200]
 
-            extra_bits = []
+                extra_bits = []
 
-            if c.get("retrieval_distance") is not None:
-                extra_bits.append(
-                    f"faiss distance={c['retrieval_distance']:.4f}"
+                if c.get("retrieval_distance") is not None:
+                    extra_bits.append(
+                        f"faiss distance={c['retrieval_distance']:.4f}"
+                    )
+
+                if c.get("rerank_score") is not None:
+                    extra_bits.append(
+                        f"rerank={c['rerank_score']:.4f}"
+                    )
+
+                extra = (
+                    f" | {' | '.join(extra_bits)}"
+                    if extra_bits else ""
                 )
 
-            if c.get("rerank_score") is not None:
-                extra_bits.append(
-                    f"rerank={c['rerank_score']:.4f}"
+                print(
+                    f"{i}. [{label}{extra}] "
+                    f"{snippet}...\n"
                 )
-
-            extra = f" | {' | '.join(extra_bits)}" if extra_bits else ""
-
-            print(
-                f"{i}. [{label}{extra}] "
-                f"{snippet}...\n"
-            )
 
         print("\n--- Final Answer ---\n")
         print(state.answer)
@@ -58,7 +72,9 @@ def main():
         if state.retrieved_contexts:
             print("\n--- Sources ---\n")
 
-            for label in unique_citations(state.retrieved_contexts):
+            for label in unique_citations(
+                state.retrieved_contexts
+            ):
                 print(label)
 
         if state.followup_suggestions:

@@ -1,54 +1,34 @@
+from .query_analyzer import analyze_query
 from .state import AgentState
 
 
-AMBIGUOUS_SHORT_QUERIES = {
-    "svm",
-    "cnn",
-    "rnn",
-    "nlp",
-    "natural acceptance",
-    "bayes",
-    "regression",
-}
-
-
-def detect_query_type(query: str) -> str:
-    query = (query or "").strip().lower()
-
-    if not query:
-        return "empty"
-
-    if query in AMBIGUOUS_SHORT_QUERIES:
-        return "ambiguous"
-
-    if len(query.split()) <= 2:
-        return "short_query"
-
-    comparative_keywords = [
-        "compare",
-        "difference",
-        "vs",
-        "versus",
-    ]
-
-    if any(word in query for word in comparative_keywords):
-        return "comparative"
-
-    return "direct"
-
-
 def select_branch(state: AgentState) -> str:
-    qtype = detect_query_type(state.user_query)
+    analysis = analyze_query(state.user_query)
 
-    state.query_type = qtype
+    state.query_type = analysis.get(
+        "query_type",
+        "direct"
+    )
 
-    if qtype == "ambiguous":
-        state.branch_taken = "clarification_candidate"
-        return "clarification_candidate"
+    state.needs_clarification = analysis.get(
+        "needs_clarification",
+        False
+    )
 
-    if qtype == "comparative":
-        state.branch_taken = "comparative_retrieval"
-        return "comparative_retrieval"
+    state.analyzer_confidence = float(
+        analysis.get("confidence", 0.0)
+    )
 
-    state.branch_taken = "direct_retrieval"
-    return "direct_retrieval"
+    state.analyzer_reason = analysis.get(
+        "reason",
+        ""
+    )
+
+    branch = analysis.get(
+        "recommended_branch",
+        "direct_retrieval"
+    )
+
+    state.branch_taken = branch
+
+    return branch
