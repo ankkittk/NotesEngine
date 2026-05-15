@@ -6,7 +6,14 @@ from typing import Any
 class AgentState:
     user_query: str
 
+    resolved_query: str = ""
     retrieval_query: str = ""
+
+    extracted_topic: str = ""
+    comparison_topics: list[str] = field(default_factory=list)
+
+    current_topic: str = ""
+    pending_topic: str = ""
 
     query_type: str = ""
     branch_taken: str = ""
@@ -18,7 +25,7 @@ class AgentState:
     retrieved_contexts: list[dict[str, Any]] = field(default_factory=list)
 
     answer: str = ""
-
     followup_suggestions: list[str] = field(default_factory=list)
 
-    session_id: str = ""
+    session_id: str = "default"
+    memory_history: list[dict[str, Any]] = field(default_factory=list)
