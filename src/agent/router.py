@@ -2,119 +2,255 @@ from .query_analyzer import analyze_query
 from .state import AgentState
 
 
-def _has_anchor_topic(state: AgentState) -> bool:
-    return bool((state.current_topic or "").strip() or (state.pending_topic or "").strip())
+FOLLOWUP_KEYWORDS = {
+    "applications",
+    "advantages",
+    "limitations",
+    "benefits",
+    "uses",
+    "examples",
+    "summary",
+    "features",
+    "purpose",
+    "meaning",
+}
+
+PRONOUNS = {
+    "it",
+    "this",
+    "that",
+    "them",
+    "those",
+    "these",
+    "its",
+    "their",
+}
 
 
-def _normalized(text: str) -> str:
-    return " ".join((text or "").strip().split()).lower()
+def _normalize(text: str) -> str:
+    return " ".join(
+        (text or "").strip().split()
+    ).lower()
 
 
-def _is_explicit_comparative(query: str) -> bool:
-    q = _normalized(query)
-
-    if q.startswith("compare ") and any(sep in q for sep in (" with ", " and ", " vs ", " versus ", " to ")):
-        return True
-
-    if q.startswith("difference between ") and " and " in q:
-        return True
-
-    return False
-
-
-def _is_explicit_direct(query: str) -> bool:
-    q = _normalized(query)
-
-    direct_prefixes = (
-        "what is ",
-        "what are ",
-        "explain ",
-        "define ",
-        "describe ",
-        "tell me about ",
-        "give me ",
-        "write about ",
-        "what does ",
-        "who is ",
-        "how does ",
+def _has_anchor_topic(
+    state: AgentState
+) -> bool:
+    return bool(
+        (state.current_topic or "").strip()
+        or (state.pending_topic or "").strip()
     )
 
-    return q.startswith(direct_prefixes)
+
+def _contains_pronoun_reference(
+    query: str
+) -> bool:
+    q = f" {_normalize(query)} "
+
+    return any(
+        f" {p} " in q
+        for p in PRONOUNS
+    )
 
 
-def _is_followup_template(query: str) -> bool:
-    q = _normalized(query)
+def _is_short_followup(
+    query: str
+) -> bool:
+    q = _normalize(query).rstrip("?")
 
-    short_followups = {
-        "applications",
-        "advantages",
-        "limitations",
-        "benefits",
-        "uses",
-        "disadvantages",
-        "examples",
-        "summary",
-        "meaning",
-        "purpose",
-        "features",
-    }
+    if not q:
+        return False
 
-    first_word = q.split()[0].rstrip("?") if q.split() else ""
-    if first_word in short_followups:
+    first_word = (
+        q.split()[0]
+        if q.split()
+        else ""
+    )
+
+    return first_word in FOLLOWUP_KEYWORDS
+
+
+def _is_explicit_comparative(
+    query: str
+) -> bool:
+    q = _normalize(query)
+
+    comparative_patterns = [
+        "compare ",
+        "difference between ",
+    ]
+
+    comparative_separators = [
+        " with ",
+        " and ",
+        " vs ",
+        " versus ",
+        " to ",
+    ]
+
+    return (
+        any(
+            q.startswith(p)
+            for p in comparative_patterns
+        )
+        and any(
+            sep in q
+            for sep in comparative_separators
+        )
+    )
+
+
+def _is_followup_query(
+    query: str
+) -> bool:
+    q = _normalize(query)
+
+    if _contains_pronoun_reference(q):
         return True
 
-    if q.startswith(("applications of ", "advantages of ", "limitations of ", "benefits of ", "uses of ")):
+    if _is_short_followup(q):
         return True
 
-    if q.startswith(("in ", "in the ", "for ", "about ", "with ", "on ", "of ")):
-        return True
-
-    pronouns = (" it ", " this ", " that ", " them ", " those ", " these ", " its ", " their ")
-    if any(p in f" {q} " for p in pronouns):
+    if q.startswith((
+        "in ",
+        "in the ",
+        "for ",
+        "about ",
+        "on ",
+        "with ",
+        "of ",
+    )):
         return True
 
     return False
 
 
-def _branch_to_query_type(branch: str) -> str:
-    return {
+def _query_type_from_branch(
+    branch: str
+) -> str:
+    mapping = {
         "direct_retrieval": "direct",
         "comparative_retrieval": "comparative",
         "clarification_candidate": "ambiguous",
         "out_of_domain_response": "out_of_domain",
-    }.get(branch, "direct")
+    }
+
+    return mapping.get(
+        branch,
+        "direct"
+    )
 
 
-def select_branch(state: AgentState) -> str:
-    analysis_query = (state.resolved_query or state.user_query or "").strip()
+def _memory_override_branch(
+    state: AgentState
+) -> str | None:
+    resolved_query = (
+        state.resolved_query
+        or state.user_query
+    )
 
-    analysis = analyze_query(analysis_query)
+    if not _has_anchor_topic(state):
+        return None
 
-    state.analyzer_reason = analysis.get("reason", analysis.get("reasoning", ""))
-    state.analyzer_confidence = float(analysis.get("confidence", analysis.get("confidence_score", 0.0)) or 0.0)
-    state.needs_clarification = bool(analysis.get("needs_clarification", analysis.get("clarification_needed", False)))
+    if _is_explicit_comparative(
+        resolved_query
+    ):
+        return (
+            "comparative_retrieval"
+        )
 
-    hint = None
+    if _is_followup_query(
+        resolved_query
+    ):
+        return (
+            "direct_retrieval"
+        )
 
-    if _is_explicit_comparative(analysis_query):
-        hint = "comparative_retrieval"
+    return None
 
-    elif _is_explicit_direct(analysis_query):
-        hint = "direct_retrieval"
 
-    elif _is_followup_template(analysis_query):
-        if _has_anchor_topic(state):
-            if _normalized(analysis_query).startswith("compare "):
-                hint = "comparative_retrieval"
-            else:
-                hint = "direct_retrieval"
+def select_branch(
+    state: AgentState
+) -> str:
+    analysis_query = (
+        state.resolved_query
+        or state.user_query
+        or ""
+    ).strip()
 
-    branch = hint or analysis.get("recommended_branch", "direct_retrieval")
+    memory_override = (
+        _memory_override_branch(
+            state
+        )
+    )
+
+    analysis = analyze_query(
+        analysis_query
+    )
+
+    state.analyzer_reason = (
+        analysis.get(
+            "reason",
+            analysis.get(
+                "reasoning",
+                ""
+            )
+        )
+    )
+
+    state.analyzer_confidence = (
+        float(
+            analysis.get(
+                "confidence",
+                analysis.get(
+                    "confidence_score",
+                    0.0
+                )
+            )
+        )
+    )
+
+    state.needs_clarification = (
+        bool(
+            analysis.get(
+                "needs_clarification",
+                analysis.get(
+                    "clarification_needed",
+                    False
+                )
+            )
+        )
+    )
+
+    branch = (
+        analysis.get(
+            "recommended_branch",
+            "direct_retrieval"
+        )
+    )
+
+    if memory_override:
+        branch = memory_override
+
+        state.analyzer_reason += (
+            " | conversational "
+            "memory override applied"
+        )
 
     state.branch_taken = branch
-    state.query_type = _branch_to_query_type(branch)
 
-    if hint and hint != analysis.get("recommended_branch"):
-        state.analyzer_reason = f"{state.analyzer_reason} (routing overridden by explicit pattern)"
+    state.query_type = (
+        _query_type_from_branch(
+            branch
+        )
+    )
+
+    if (
+        branch
+        != "clarification_candidate"
+    ):
+        state.needs_clarification = (
+            False
+        )
 
     return branch

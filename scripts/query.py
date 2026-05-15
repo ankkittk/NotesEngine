@@ -2,13 +2,22 @@ import os
 import sys
 
 CURRENT_DIR = os.path.dirname(__file__)
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+
+PROJECT_ROOT = os.path.abspath(
+    os.path.join(CURRENT_DIR, "..")
+)
 
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from src.agent.workflow import run_agentic_workflow
-from src.core.utils import format_citation, get_context_text, unique_citations
+from src.agent.workflow import (
+    run_agentic_workflow,
+)
+from src.core.utils import (
+    format_citation,
+    get_context_text,
+    unique_citations,
+)
 
 
 SESSION_ID = "cli_session"
@@ -16,63 +25,159 @@ SESSION_ID = "cli_session"
 
 def main():
     while True:
-        query = input("\nEnter query (or 'exit'): ").strip()
+        query = input(
+            "\nEnter query (or 'exit'): "
+        ).strip()
 
         if query.lower() == "exit":
             break
 
-        state = run_agentic_workflow(query, session_id=SESSION_ID)
+        state = run_agentic_workflow(
+            query,
+            session_id=SESSION_ID
+        )
 
         print("\n--- Agent State ---\n")
-        print(f"Query Type            : {state.query_type}")
-        print(f"Branch Taken          : {state.branch_taken}")
-        print(f"Needs Clarification   : {state.needs_clarification}")
-        print(f"Analyzer Confidence   : {state.analyzer_confidence:.2f}")
+
+        print(
+            f"Query Type            : "
+            f"{state.query_type}"
+        )
+
+        print(
+            f"Branch Taken          : "
+            f"{state.branch_taken}"
+        )
+
+        print(
+            f"Needs Clarification   : "
+            f"{state.needs_clarification}"
+        )
+
+        print(
+            f"Analyzer Confidence   : "
+            f"{state.analyzer_confidence:.2f}"
+        )
 
         if state.analyzer_reason:
-            print(f"Analyzer Reason       : {state.analyzer_reason}")
+            print(
+                f"Analyzer Reason       : "
+                f"{state.analyzer_reason}"
+            )
 
-        print(f"Resolved Query        : {state.resolved_query}")
-        print(f"Current Topic         : {state.current_topic}")
-        print(f"Pending Topic         : {state.pending_topic}")
-        print(f"Extracted Topic       : {state.extracted_topic}")
+        print(
+            f"Resolved Query        : "
+            f"{state.resolved_query}"
+        )
+
+        print(
+            f"Current Topic         : "
+            f"{state.current_topic}"
+        )
+
+        print(
+            f"Pending Topic         : "
+            f"{state.pending_topic}"
+        )
+
+        print(
+            f"Extracted Topic       : "
+            f"{state.extracted_topic}"
+        )
 
         if state.comparison_topics:
-            print(f"Comparison Topics     : {', '.join(state.comparison_topics)}")
+            print(
+                "Comparison Topics     : "
+                f"{', '.join(state.comparison_topics)}"
+            )
 
         if state.retrieval_query:
-            print(f"Retrieval Query       : {state.retrieval_query}")
+            print(
+                f"Retrieval Query       : "
+                f"{state.retrieval_query}"
+            )
 
         if state.retrieved_contexts:
-            print("\n--- Retrieved Context ---\n")
+            print(
+                "\n--- Retrieved Context ---\n"
+            )
 
-            for i, c in enumerate(state.retrieved_contexts, 1):
-                label = format_citation(c)
-                snippet = get_context_text(c)[:200]
+            for i, c in enumerate(
+                state.retrieved_contexts,
+                1
+            ):
+                label = format_citation(
+                    c
+                )
+
+                snippet = (
+                    get_context_text(c)
+                    [:200]
+                )
 
                 extra_bits = []
 
-                if c.get("retrieval_distance") is not None:
-                    extra_bits.append(f"faiss distance={c['retrieval_distance']:.4f}")
+                if (
+                    c.get(
+                        "retrieval_distance"
+                    )
+                    is not None
+                ):
+                    extra_bits.append(
+                        "faiss distance="
+                        f"{c['retrieval_distance']:.4f}"
+                    )
 
-                if c.get("rerank_score") is not None:
-                    extra_bits.append(f"rerank={c['rerank_score']:.4f}")
+                if (
+                    c.get(
+                        "rerank_score"
+                    )
+                    is not None
+                ):
+                    extra_bits.append(
+                        "rerank="
+                        f"{c['rerank_score']:.4f}"
+                    )
 
-                extra = f" | {' | '.join(extra_bits)}" if extra_bits else ""
-                print(f"{i}. [{label}{extra}] {snippet}...\n")
+                extra = (
+                    f" | {' | '.join(extra_bits)}"
+                    if extra_bits
+                    else ""
+                )
+
+                print(
+                    f"{i}. "
+                    f"[{label}{extra}] "
+                    f"{snippet}...\n"
+                )
 
         print("\n--- Final Answer ---\n")
         print(state.answer)
 
         if state.retrieved_contexts:
             print("\n--- Sources ---\n")
-            for label in unique_citations(state.retrieved_contexts):
+
+            for label in (
+                unique_citations(
+                    state.retrieved_contexts
+                )
+            ):
                 print(label)
 
-        if state.followup_suggestions:
-            print("\n--- Suggested Follow-ups ---\n")
-            for suggestion in state.followup_suggestions:
-                print(f"- {suggestion}")
+        if (
+            state.followup_suggestions
+        ):
+            print(
+                "\n--- Suggested "
+                "Follow-ups ---\n"
+            )
+
+            for suggestion in (
+                state.followup_suggestions
+            ):
+                print(
+                    f"- {suggestion}"
+                )
 
 
 if __name__ == "__main__":
