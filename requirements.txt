@@ -16,3 +16,4 @@ fasrtapi
 uvicorn
 streamlit
 requests
+langgraph
