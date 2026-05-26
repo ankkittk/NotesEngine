@@ -11,9 +11,9 @@ openai
 python-dotenv
 python-docx
 python-pptx
-sentence-transformers
-fasrtapi
+fastapi
 uvicorn
 streamlit
 requests
 langgraph
+python-multipart

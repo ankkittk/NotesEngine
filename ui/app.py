@@ -4,6 +4,7 @@ import requests
 import streamlit as st
 
 API_URL = "http://127.0.0.1:8000/query"
+UPLOAD_URL = "http://127.0.0.1:8000/upload"
 
 st.set_page_config(page_title="NotesEngine Agentic RAG", layout="wide")
 st.title("NotesEngine - Your Personal Agentic RAG Chatbot")
@@ -13,6 +14,61 @@ if "session_id" not in st.session_state:
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+with st.sidebar:
+    st.header("Knowledge Base")
+    uploaded_files = st.file_uploader(
+        "Upload documents to append to the KB",
+        type=["pdf", "txt", "docx", "pptx"],
+        accept_multiple_files=True,
+    )
+
+    upload_clicked = st.button("Upload & ingest")
+
+    if upload_clicked:
+        if not uploaded_files:
+            st.warning("Please choose at least one file.")
+        else:
+            multipart_files = []
+            for f in uploaded_files:
+                multipart_files.append(
+                    (
+                        "files",
+                        (f.name, f.getvalue(), f.type or "application/octet-stream"),
+                    )
+                )
+
+            with st.spinner("Uploading and ingesting..."):
+                response = requests.post(
+                    UPLOAD_URL,
+                    files=multipart_files,
+                    data={"session_id": st.session_state.session_id},
+                    timeout=600,
+                )
+                response.raise_for_status()
+                upload_data = response.json()
+
+            st.success("Upload complete.")
+            if upload_data.get("saved_files"):
+                st.write("Saved files:")
+                for name in upload_data["saved_files"]:
+                    st.write(f"- {name}")
+
+            if upload_data.get("results"):
+                st.write("Ingestion results:")
+                for item in upload_data["results"]:
+                    st.write(
+                        f"- {item['file_name']}: {item['status']} "
+                        f"({item.get('reason', '')})"
+                    )
+
+            if upload_data.get("skipped"):
+                st.write("Skipped:")
+                for item in upload_data["skipped"]:
+                    st.write(
+                        f"- {item['file_name']}: {item['status']} "
+                        f"({item['reason']})"
+                    )
 
 col1, col2 = st.columns([1, 1])
 with col1:

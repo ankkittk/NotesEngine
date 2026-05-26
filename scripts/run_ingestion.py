@@ -7,17 +7,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from src.core.config import DATA_PATH, ALLOWED_EXTENSIONS
-from src.ingestion.chunker import chunk_documents
-from src.ingestion.document_loader import load_document
-from src.ingestion.embedder import create_embeddings
-from src.ingestion.ingestion_tracker import (
-    load_tracker,
-    save_tracker,
-    is_processed,
-    mark_processed,
-)
-from src.retrieval.vector_store import store_embeddings
+from src.core.config import ALLOWED_EXTENSIONS, DATA_PATH
+from src.ingestion.ingest_service import ingest_single_file
+from src.ingestion.ingestion_tracker import is_processed, load_tracker, save_tracker
 
 
 def render_progress(current, total, prefix="", detail=""):
@@ -36,9 +28,10 @@ def render_progress(current, total, prefix="", detail=""):
         sys.stdout.write("\n")
 
 
-def load_new_documents(processed_files):
-    documents = []
-    file_names = []
+def main():
+    overall_start = time.perf_counter()
+
+    processed_files = load_tracker()
 
     all_files = [
         f for f in sorted(os.listdir(DATA_PATH))
@@ -53,76 +46,56 @@ def load_new_documents(processed_files):
     )
 
     if not new_files:
-        return documents, file_names
-
-    total = len(new_files)
-
-    for idx, file in enumerate(new_files, start=1):
-        file_path = os.path.join(DATA_PATH, file)
-        started = time.perf_counter()
-
-        render_progress(idx - 1, total, prefix="Ingesting", detail=file)
-
-        page_records = load_document(file_path)
-        elapsed = time.perf_counter() - started
-
-        if page_records:
-            documents.extend(page_records)
-            file_names.append(file)
-
-            combined_text = "\n\n".join(
-                record.get("text", "") for record in page_records if record.get("text", "").strip()
-            )
-            word_count = len(combined_text.split())
-
-            print(
-                f"[{idx}/{total}] {file} | "
-                f"pages={len(page_records)} words={word_count:,} chars={len(combined_text):,} | "
-                f"{elapsed:.1f}s"
-            )
-        else:
-            print(f"[{idx}/{total}] {file} | empty | {elapsed:.1f}s")
-
-        render_progress(idx, total, prefix="Ingesting", detail=file)
-
-    return documents, file_names
-
-
-def main():
-    overall_start = time.perf_counter()
-
-    processed_files = load_tracker()
-    documents, file_names = load_new_documents(processed_files)
-
-    if not documents:
         print("No new files to process.")
         return
 
-    print(f"\nChunking {len(documents)} page records...")
-    chunk_start = time.perf_counter()
-    chunks = chunk_documents(documents)
-    print(f"Created {len(chunks)} chunks in {time.perf_counter() - chunk_start:.1f}s")
+    total = len(new_files)
 
-    if not chunks:
-        print("No valid chunks produced")
-        return
+    for idx, file_name in enumerate(new_files, start=1):
+        file_path = os.path.join(DATA_PATH, file_name)
+        started = time.perf_counter()
 
-    print("Creating embeddings...")
-    emb_start = time.perf_counter()
-    embeddings, texts, metadata, vectorizer = create_embeddings(chunks)
-    print(f"Embeddings ready in {time.perf_counter() - emb_start:.1f}s")
+        render_progress(idx - 1, total, prefix="Ingesting", detail=file_name)
 
-    print("Updating vector store...")
-    store_embeddings(embeddings, texts, metadata, vectorizer)
+        result = ingest_single_file(
+            file_path,
+            processed_files=processed_files,
+            save_tracker_after=False,
+        )
 
-    for f in file_names:
-        mark_processed(f, processed_files)
+        elapsed = time.perf_counter() - started
+
+        if result["status"] == "ingested":
+            print(
+                f"[{idx}/{total}] {file_name} | "
+                f"pages={result['pages']} "
+                f"chunks={result['chunks']} "
+                f"embeddings={result['embeddings']} | "
+                f"{elapsed:.1f}s"
+            )
+        elif result["status"] == "skipped":
+            print(
+                f"[{idx}/{total}] {file_name} | skipped "
+                f"({result['reason']}) | {elapsed:.1f}s"
+            )
+        elif result["status"] == "empty":
+            print(
+                f"[{idx}/{total}] {file_name} | empty "
+                f"({result['reason']}) | {elapsed:.1f}s"
+            )
+        else:
+            print(
+                f"[{idx}/{total}] {file_name} | error "
+                f"({result['reason']}) | {elapsed:.1f}s"
+            )
+
+        render_progress(idx, total, prefix="Ingesting", detail=file_name)
 
     save_tracker(processed_files)
 
     total_elapsed = time.perf_counter() - overall_start
     print(
-        f"\nAdded {len(file_names)} new files | "
+        f"\nAdded {len(new_files)} new files | "
         f"total processed={len(processed_files)} | "
         f"done in {total_elapsed:.1f}s"
     )

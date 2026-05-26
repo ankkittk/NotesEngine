@@ -12,6 +12,10 @@ from ..core.config import (
     INITIAL_RETRIEVAL_TOP_K,
     RERANK_TOP_K,
 )
+from ..core.logger import (
+    log_query,
+    log_retrieval,
+)
 from ..generation.generator import generate_answer
 from ..retrieval.query_rewriter import rewrite_query
 from ..retrieval.reranker import rerank
@@ -49,6 +53,14 @@ def memory_resolution_node(state):
     )
 
     state["resolved_query"] = resolved_query
+
+    log_query(
+        session_id=state["session_id"],
+        user_query=state["user_query"],
+        resolved_query=state["resolved_query"],
+        branch_taken="pending",
+        query_type="pending",
+    )
 
     return state
 
@@ -142,6 +154,12 @@ def direct_retrieval_node(state):
         reranked
     )
 
+    log_retrieval(
+        session_id=state["session_id"],
+        retrieval_query=retrieval_query,
+        contexts=reranked,
+    )
+
     return state
 
 
@@ -156,6 +174,12 @@ def comparative_retrieval_node(state):
 
     state["retrieved_contexts"] = (
         reranked
+    )
+
+    log_retrieval(
+        session_id=state["session_id"],
+        retrieval_query=state["resolved_query"],
+        contexts=reranked,
     )
 
     return state
