@@ -3,6 +3,8 @@ import shutil
 import uuid
 from pathlib import Path
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
@@ -13,6 +15,13 @@ from src.ingestion.ingestion_tracker import load_tracker
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class QueryRequest(BaseModel):
     query: str
