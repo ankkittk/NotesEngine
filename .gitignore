@@ -1,12 +1,7 @@
 venv/
 __pycache__/
 *.pyc
-
 vector-db/
-logs/
-eval-results/
 data/
-
 .env
-
 .vscode/

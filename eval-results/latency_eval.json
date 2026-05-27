@@ -1,0 +1,24 @@
+{
+  "total_queries": 6,
+  "unique_sessions": 2,
+  "average_queries_per_session": 3.0,
+  "branch_distribution": {
+    "direct_retrieval": 5,
+    "comparative_retrieval": 1
+  },
+  "query_type_distribution": {
+    "direct": 5,
+    "comparative": 1
+  },
+  "top_sessions": [
+    [
+      "166398b0-712a-4f52-a6e9-6c6def9e79c7",
+      3
+    ],
+    [
+      "783b49c7-a291-4467-bf39-7cda9f4bdcf2",
+      3
+    ]
+  ],
+  "status": "logging active"
+}

@@ -20,6 +20,11 @@ INGESTION_LOG = os.path.join(
     "ingestion_logs.jsonl"
 )
 
+GENERATION_LOG = os.path.join(
+    LOG_DIR,
+    "generation_logs.jsonl"
+)
+
 ERROR_LOG = os.path.join(
     LOG_DIR,
     "errors.log"
@@ -93,6 +98,33 @@ def log_retrieval(
 
     _append_jsonl(
         RETRIEVAL_LOG,
+        payload
+    )
+
+
+def log_generation(
+    session_id,
+    query,
+    answer,
+    contexts,
+):
+    payload = {
+        "timestamp": _timestamp(),
+        "session_id": session_id,
+        "query": query,
+        "answer": answer,
+        "contexts": [],
+    }
+
+    for c in contexts:
+        payload["contexts"].append({
+            "source": c.get("source"),
+            "page": c.get("page"),
+            "text": c.get("text", ""),
+        })
+
+    _append_jsonl(
+        GENERATION_LOG,
         payload
     )
 

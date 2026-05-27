@@ -1,0 +1,89 @@
+{
+  "total_queries": 17,
+  "retrieved_results": 51,
+  "average_results_per_query": 3.0,
+  "average_rerank_score": 2.4611,
+  "average_retrieval_distance": 0.9137,
+  "unique_sources_retrieved": 10,
+  "dominant_source_ratio": 0.2941,
+  "top_sources": [
+    [
+      "OS_Notes_Complete_by_Prof._Bacchanidhi.pdf",
+      15
+    ],
+    [
+      "PPT-Unit3b.pdf",
+      13
+    ],
+    [
+      "Book2_Christopher_D._Manning_Hinrich_Sch\u00fctze_Foundations_Of_Statistical_Natural_Language_Processing.pdf",
+      5
+    ],
+    [
+      "0 AI_Theory_PPT_Module1_2_3.pdf",
+      4
+    ],
+    [
+      "ML - 1.pdf",
+      3
+    ],
+    [
+      "0 AI_Theory_Module7_Uncertainty_Probability.pdf",
+      3
+    ],
+    [
+      "Sandeep Bhowmik - Cloud Computing.pdf",
+      3
+    ],
+    [
+      "PPT-Unit1.pdf",
+      2
+    ],
+    [
+      "PPT-Unit5.pdf",
+      2
+    ],
+    [
+      "PPT-Unit1_eba64861.pdf",
+      1
+    ]
+  ],
+  "top1_source_distribution": [
+    [
+      "OS_Notes_Complete_by_Prof._Bacchanidhi.pdf",
+      6
+    ],
+    [
+      "PPT-Unit3b.pdf",
+      3
+    ],
+    [
+      "0 AI_Theory_PPT_Module1_2_3.pdf",
+      2
+    ],
+    [
+      "PPT-Unit1.pdf",
+      1
+    ],
+    [
+      "ML - 1.pdf",
+      1
+    ],
+    [
+      "0 AI_Theory_Module7_Uncertainty_Probability.pdf",
+      1
+    ],
+    [
+      "Book2_Christopher_D._Manning_Hinrich_Sch\u00fctze_Foundations_Of_Statistical_Natural_Language_Processing.pdf",
+      1
+    ],
+    [
+      "Sandeep Bhowmik - Cloud Computing.pdf",
+      1
+    ],
+    [
+      "PPT-Unit5.pdf",
+      1
+    ]
+  ]
+}

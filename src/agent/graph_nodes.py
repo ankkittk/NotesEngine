@@ -13,6 +13,7 @@ from ..core.config import (
     RERANK_TOP_K,
 )
 from ..core.logger import (
+    log_generation,
     log_query,
     log_retrieval,
 )
@@ -54,14 +55,6 @@ def memory_resolution_node(state):
 
     state["resolved_query"] = resolved_query
 
-    log_query(
-        session_id=state["session_id"],
-        user_query=state["user_query"],
-        resolved_query=state["resolved_query"],
-        branch_taken="pending",
-        query_type="pending",
-    )
-
     return state
 
 
@@ -87,6 +80,7 @@ def routing_node(state):
     branch = select_branch(agent_state)
 
     state["branch_taken"] = branch
+
     state["query_type"] = (
         agent_state.query_type
     )
@@ -101,6 +95,14 @@ def routing_node(state):
 
     state["analyzer_reason"] = (
         agent_state.analyzer_reason
+    )
+
+    log_query(
+        session_id=state["session_id"],
+        user_query=state["user_query"],
+        resolved_query=state["resolved_query"],
+        branch_taken=state["branch_taken"],
+        query_type=state["query_type"],
     )
 
     return state
@@ -229,6 +231,13 @@ def generation_node(state):
     )
 
     state["answer"] = answer
+
+    log_generation(
+        session_id=state["session_id"],
+        query=state["resolved_query"],
+        answer=answer,
+        contexts=state["retrieved_contexts"],
+    )
 
     topic = (
         state.get("extracted_topic")
