@@ -3,8 +3,8 @@ import uuid
 import requests
 import streamlit as st
 
-API_URL = "http://127.0.0.1:8000/query"
-UPLOAD_URL = "http://127.0.0.1:8000/upload"
+API_URL = "https://notesengine-api-production.up.railway.app/query"
+UPLOAD_URL = "https://notesengine-api-production.up.railway.app/upload"
 
 st.set_page_config(page_title="NotesEngine Agentic RAG", layout="wide")
 st.title("NotesEngine - Your Personal Agentic RAG Chatbot")
