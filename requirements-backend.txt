@@ -1,0 +1,14 @@
+faiss-cpu
+fastapi
+langgraph
+numpy
+openai
+pydantic
+pymupdf
+python-docx
+python-dotenv
+python-multipart
+python-pptx
+requests
+sentence-transformers
+uvicorn
