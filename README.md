@@ -174,6 +174,43 @@ streamlit run ui/app.py
 
 The UI lets you upload notes, start a session, ask questions, inspect retrieved contexts, and see suggested follow-ups.
 
+
+## Docker
+
+### Build Backend Image
+
+```powershell
+docker build -f Dockerfile.backend -t notesengine-backend .
+```
+
+### Run Backend Container
+
+```powershell
+docker run --env-file .env -p 8000:8000 notesengine-backend
+```
+
+The backend will be available at:
+
+```text
+http://localhost:8000
+```
+
+### Verify API
+
+Open:
+
+```text
+http://localhost:8000/docs
+```
+
+### Run Frontend
+
+In a separate terminal:
+
+```powershell
+streamlit run ui/app.py
+```
+
 ## Usage
 
 ### Streamlit Chat
@@ -317,6 +354,10 @@ NotesEngine/
   vector-db/                 Local FAISS index and metadata
   logs/                      JSONL telemetry logs
   eval-results/              Evaluation outputs
+  Dockerfile.backend         Backend container definition
+  Dockerfile.frontend        Frontend container definition
+  docker-compose.yml         Local multi-container setup
+  .dockerignore              Docker build exclusions
 ```
 
 ## Design Notes
