@@ -1,7 +1,7 @@
 {
-  "total_answers": 3,
-  "average_grounding_score": 0.6157,
+  "total_answers": 5,
+  "average_grounding_score": 0.634,
   "unsupported_sentence_ratio": 0.0,
-  "average_citation_density": 0.6444,
+  "average_citation_density": 0.6867,
   "grounding_quality": "good"
 }
