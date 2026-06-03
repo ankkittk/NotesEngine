@@ -105,6 +105,12 @@ The router decides how to handle the query before retrieval happens:
 - Gemini API for vision-based OCR fallback
 - JSONL logs and local evaluation scripts
 
+## Live Demo
+
+- Frontend: https://notes-engine.streamlit.app
+- Backend: Railway-deployed FastAPI service
+- Backend API docs: available from the Railway service URL at `/docs`
+
 ## Quick Start
 
 ### 1. Create a virtual environment
